@@ -26,7 +26,7 @@ def get_args():
                         nargs='?',
                         choices=['caption', 'controllable'])
     parser.add_argument('--prompt',
-                        default='Image of a', type=str)
+                        default='รูปของ', type=str)
     parser.add_argument('--order',
                         default='shuffle',
                         nargs='?',
@@ -52,7 +52,7 @@ def get_args():
 
     ## Hyperparameters
     parser.add_argument("--sentence_len", type=int, default=10)
-    parser.add_argument("--candidate_k", type=int, default=200)
+    parser.add_argument("--candidate_k", type=int, default=2000)
     parser.add_argument("--alpha", type=float, default=0.02, help="weight for fluency")
     parser.add_argument("--beta", type=float, default=2.0, help="weight for image-matching degree")
     parser.add_argument("--gamma", type=float, default=5.0, help="weight for controllable degree")
@@ -91,11 +91,11 @@ def run_caption(args, image_path, lm_model, lm_tokenizer, clip, token_mask, logg
 
 def run_control(run_type, args, image_path, lm_model, lm_tokenizer, clip, token_mask, logger):
     logger.info(f"Processing: {image_path}")
-    image_instance = Image.open(image_path).convert("RGB")
+    text_instance = ['image of a sleeping girl is background amidst elegant swirling water dress']
     img_name = [image_path.split("/")[-1]]
     for sample_id in range(args.samples_num):
         logger.info(f"Sample {sample_id}: ")
-        gen_texts, clip_scores = control_generate_caption(img_name, lm_model, clip, lm_tokenizer, image_instance, token_mask, logger,
+        gen_texts, clip_scores = control_generate_caption(img_name, lm_model, clip, lm_tokenizer, text_instance, token_mask, logger,
                                                           prompt=args.prompt, batch_size=args.batch_size, max_len=args.sentence_len,
                                                           top_k=args.candidate_k, temperature=args.lm_temperature,
                                                           max_iter=args.num_iterations, alpha=args.alpha,
@@ -138,6 +138,7 @@ if __name__ == "__main__":
         stop_words_ = [stop_word.rstrip('\n') for stop_word in stop_words]
         stop_words_ += args.add_extra_stopwords
         stop_ids = lm_tokenizer.convert_tokens_to_ids(stop_words_)
+        stop_ids = [stop_id for stop_id in stop_ids if stop_id is not None]
         token_mask = torch.ones((1, lm_tokenizer.vocab_size))
         for stop_id in stop_ids:
             token_mask[0, stop_id] = 0

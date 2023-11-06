@@ -2,6 +2,7 @@ import torch
 import requests
 from torch import nn
 from PIL import Image
+from sentence_transformers import SentenceTransformer
 
 
 class CLIP(nn.Module):
@@ -9,12 +10,8 @@ class CLIP(nn.Module):
         super(CLIP, self).__init__()
         # model name: e.g. openai/clip-vit-base-patch32
         print('Initializing CLIP model...')
-        from transformers import CLIPProcessor, CLIPModel
-        self.model = CLIPModel.from_pretrained(model_name)
+        self.model = SentenceTransformer('sentence-transformers/stsb-xlm-r-multilingual')
         self.model.eval()
-        self.processor = CLIPProcessor.from_pretrained(model_name)
-        from transformers import CLIPTokenizer
-        self.tokenizer = CLIPTokenizer.from_pretrained(model_name)
         self.cuda_has_been_checked = False
         print('CLIP model initialized.')
 
@@ -46,21 +43,8 @@ class CLIP(nn.Module):
         image_embeds = self.model.visual_projection(image_embeds)  # [1 x embed_dim]
         return image_embeds
 
-    def compute_image_representation_from_image_instance(self, image):
-        if not self.cuda_has_been_checked:
-            self.check_cuda()
-            self.cuda_has_been_checked = True
-        else:
-            pass
-        # image_path: the path of the image
-        inputs = self.processor(images=image, return_tensors="pt")
-        pixel_values = inputs['pixel_values']
-        if self.cuda_available:
-            pixel_values = pixel_values.cuda(self.device)
-        visual_outputs = self.model.vision_model(pixel_values=pixel_values)
-        image_embeds = visual_outputs[1]
-        image_embeds = self.model.visual_projection(image_embeds)  # [1 x embed_dim]
-        return image_embeds
+    def compute_text_representation_from_text_instance(self, text):
+        return self.model.encode(text)
 
     def compute_text_representation(self, text_list):
         if not self.cuda_has_been_checked:
@@ -97,6 +81,14 @@ class CLIP(nn.Module):
         logits_per_text = torch.matmul(text_embeds, image_embeds) * logit_scale
         logits_per_image = logits_per_text.squeeze(-1)
         return logits_per_image.softmax(dim=1), logits_per_image / logit_scale  # batch x len(text_list)
+
+    def compute_text_text_similarity_via_raw_text(self, text_embeds, text_list):
+        gt = self.model.encode(text_list)
+        gt = gt / gt.norm(dim=-1, keepdim=True)
+        text_embeds = text_embeds / text_embeds.norm(dim=-1, keepdim=True)
+        logits_per_text = (text_embeds @ gt.T)
+        logits_per_image = logits_per_text.squeeze(-1)
+        return logits_per_image.softmax(dim=1), logits_per_image
 
     def compute_image_text_similarity_via_raw_text(self, image_embeds, text_list):
         text_embeds = self.compute_text_representation(text_list)

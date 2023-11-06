@@ -28,18 +28,18 @@ def generate_caption_step(out, gen_idx, mask, temperature=None, top_k=0):
     return top_k_probs, top_k_ids
 
 
-def sentiment_sequential_generation(img_name, model, clip, tokenizer, image_instance, token_mask, prompt, logger,
+def sentiment_sequential_generation(img_name, model, clip, tokenizer, text_instance, token_mask, prompt, logger,
                                     max_len=15, top_k=0, temperature=None, alpha=0.7, beta=1,
                                     max_iters=20, batch_size=1,
                                     verbose=True, gamma=5, ctl_signal="positive"):
     """ Generate one word at a time, in L->R order """
     seed_len = len(prompt.split()) + 1
     batch = get_init_text(tokenizer, prompt, max_len, batch_size)
-    image_embeds = clip.compute_image_representation_from_image_instance(image_instance)
+    text_embeds = clip.compute_text_representation_from_text_instance(text_instance)
     clip_score_sequence = []
     best_clip_score_list = [0] * batch_size
     best_caption_list = ['None'] * batch_size
-    inp = torch.tensor(batch).to(image_embeds.device)
+    inp = torch.tensor(batch).to(text_embeds.device)
     gen_texts_list = []
     for iter_num in range(max_iters):
         for ii in range(max_len):
@@ -57,11 +57,11 @@ def sentiment_sequential_generation(img_name, model, clip, tokenizer, image_inst
             sentiment_probs_batch, sentiment_scores_batch, pos_tags, wordnet_pos_tags = batch_texts_POS_Sentiments_analysis(
                 batch_text_list, 1, topk_inp.device, sentiment_ctl=ctl_signal, batch_size_image=batch_size)
             # clip_score, clip_ref = clip.compute_image_text_similarity_via_raw_text(image_embeds, batch_text_list)
-            sbert_score = _
-            final_score = alpha * probs + beta * clip_score + gamma * sentiment_probs_batch + 0.1 * (1 - torch.exp(repeats))
+            sbert_score, sbert_ref = clip.compute_text_text_similarity_via_raw_text(text_embeds, batch_text_list)
+            final_score = alpha * probs + beta * sbert_score + gamma * sentiment_probs_batch + 0.1 * (1 - torch.exp(repeats))
             best_clip_id = final_score.argmax(dim=1).view(-1, 1)
             inp[:, seed_len + ii] = idxs_.gather(1, best_clip_id).squeeze(-1)
-            current_clip_score = clip_ref.gather(1, best_clip_id).squeeze(-1)
+            current_clip_score = sbert_ref.gather(1, best_clip_id).squeeze(-1)
             current_senti_score = sentiment_scores_batch.gather(1, best_clip_id).squeeze(-1)
             clip_score_sequence_batch = current_clip_score.cpu().detach().numpy().tolist()
             senti_score_sequence_batch = current_senti_score.cpu().detach().numpy().tolist()
