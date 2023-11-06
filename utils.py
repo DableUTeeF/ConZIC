@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import colorlog
+# import colorlog
 import random
 import torch
 
@@ -23,7 +23,7 @@ def create_logger(folder, filename):
     logging.root.setLevel(LOG_LEVEL)
     stream = logging.StreamHandler()
     stream.setLevel(LOG_LEVEL)
-    stream.setFormatter(colorlog.ColoredFormatter(LOGFORMAT, datefmt='%d %H:%M', log_colors=log_colors))
+    # stream.setFormatter(colorlog.ColoredFormatter(LOGFORMAT, datefmt='%d %H:%M', log_colors=log_colors))
 
     # print to log file
     hdlr = logging.FileHandler(os.path.join(folder, filename))

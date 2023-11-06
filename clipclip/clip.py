@@ -3,11 +3,12 @@ import requests
 from torch import nn
 from PIL import Image
 
+
 class CLIP(nn.Module):
     def __init__(self, model_name):
         super(CLIP, self).__init__()
         # model name: e.g. openai/clip-vit-base-patch32
-        print ('Initializing CLIP model...')
+        print('Initializing CLIP model...')
         from transformers import CLIPProcessor, CLIPModel
         self.model = CLIPModel.from_pretrained(model_name)
         self.model.eval()
@@ -15,17 +16,17 @@ class CLIP(nn.Module):
         from transformers import CLIPTokenizer
         self.tokenizer = CLIPTokenizer.from_pretrained(model_name)
         self.cuda_has_been_checked = False
-        print ('CLIP model initialized.')
+        print('CLIP model initialized.')
 
     def check_cuda(self):
         self.cuda_available = next(self.model.parameters()).is_cuda
         self.device = next(self.model.parameters()).get_device()
         if self.cuda_available:
-            print ('Cuda is available.')
-            print ('Device is {}'.format(self.device))
+            print('Cuda is available.')
+            print('Device is {}'.format(self.device))
         else:
-            print ('Cuda is not available.')
-            print ('Device is {}'.format(self.device))
+            print('Cuda is not available.')
+            print('Device is {}'.format(self.device))
 
     @torch.no_grad()
     def compute_image_representation_from_image_path(self, image_path):
@@ -42,7 +43,7 @@ class CLIP(nn.Module):
             pixel_values = pixel_values.cuda(self.device)
         visual_outputs = self.model.vision_model(pixel_values=pixel_values)
         image_embeds = visual_outputs[1]
-        image_embeds = self.model.visual_projection(image_embeds) # [1 x embed_dim]
+        image_embeds = self.model.visual_projection(image_embeds)  # [1 x embed_dim]
         return image_embeds
 
     def compute_image_representation_from_image_instance(self, image):
@@ -58,7 +59,7 @@ class CLIP(nn.Module):
             pixel_values = pixel_values.cuda(self.device)
         visual_outputs = self.model.vision_model(pixel_values=pixel_values)
         image_embeds = visual_outputs[1]
-        image_embeds = self.model.visual_projection(image_embeds) # [1 x embed_dim]
+        image_embeds = self.model.visual_projection(image_embeds)  # [1 x embed_dim]
         return image_embeds
 
     def compute_text_representation(self, text_list):
@@ -69,7 +70,7 @@ class CLIP(nn.Module):
             pass
         # text_list: a list of text
         text_inputs = self.tokenizer(text_list, padding=True, return_tensors="pt",
-            max_length=self.tokenizer.max_len_single_sentence + 2, truncation=True)
+                                     max_length=self.tokenizer.max_len_single_sentence + 2, truncation=True)
         # self.tokenizer.max_len_single_sentence + 2 = 77
         input_ids, attention_mask = text_inputs['input_ids'], text_inputs['attention_mask']
         if self.cuda_available:
@@ -95,7 +96,7 @@ class CLIP(nn.Module):
         logit_scale = self.model.logit_scale.exp()
         logits_per_text = torch.matmul(text_embeds, image_embeds) * logit_scale
         logits_per_image = logits_per_text.squeeze(-1)
-        return logits_per_image.softmax(dim=1), logits_per_image/logit_scale # batch x len(text_list)
+        return logits_per_image.softmax(dim=1), logits_per_image / logit_scale  # batch x len(text_list)
 
     def compute_image_text_similarity_via_raw_text(self, image_embeds, text_list):
         text_embeds = self.compute_text_representation(text_list)
@@ -118,8 +119,8 @@ class CLIP(nn.Module):
             pixel_values = pixel_values.cuda(self.device)
         visual_outputs = self.model.vision_model(pixel_values=pixel_values)
         image_embeds = visual_outputs[1]
-        image_embeds = self.model.visual_projection(image_embeds) # [1 x embed_dim]
-        return image_embeds # len(image_list) x embed_dim
+        image_embeds = self.model.visual_projection(image_embeds)  # [1 x embed_dim]
+        return image_embeds  # len(image_list) x embed_dim
 
     def compute_batch_index_text_representation(self, text_list):
         if not self.cuda_has_been_checked:
@@ -128,9 +129,9 @@ class CLIP(nn.Module):
         else:
             pass
         # text_list: a list of text
-        #text_inputs = self.tokenizer(text_list, padding=True, return_tensors="pt")
+        # text_inputs = self.tokenizer(text_list, padding=True, return_tensors="pt")
         text_inputs = self.tokenizer(text_list, padding=True, return_tensors="pt",
-            max_length=self.tokenizer.max_len_single_sentence + 2, truncation=True)
+                                     max_length=self.tokenizer.max_len_single_sentence + 2, truncation=True)
         input_ids, attention_mask = text_inputs['input_ids'], text_inputs['attention_mask']
         if self.cuda_available:
             input_ids = input_ids.cuda(self.device)
@@ -142,7 +143,6 @@ class CLIP(nn.Module):
         text_embeds = text_outputs[1]
         text_embeds = self.model.text_projection(text_embeds)
         return text_embeds
-        #logit_scale = self.model.logit_scale.exp()
-        #text_embeds = text_embeds * logit_scale
-        #return text_embeds
-
+        # logit_scale = self.model.logit_scale.exp()
+        # text_embeds = text_embeds * logit_scale
+        # return text_embeds
