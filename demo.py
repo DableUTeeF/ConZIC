@@ -26,7 +26,7 @@ def get_args():
                         nargs='?',
                         choices=['caption', 'controllable'])
     parser.add_argument('--prompt',
-                        default='รูปของ', type=str)
+                        default='image of a', type=str)
     parser.add_argument('--order',
                         default='shuffle',
                         nargs='?',
@@ -52,7 +52,7 @@ def get_args():
 
     ## Hyperparameters
     parser.add_argument("--sentence_len", type=int, default=10)
-    parser.add_argument("--candidate_k", type=int, default=2000)
+    parser.add_argument("--candidate_k", type=int, default=200)
     parser.add_argument("--alpha", type=float, default=0.02, help="weight for fluency")
     parser.add_argument("--beta", type=float, default=2.0, help="weight for image-matching degree")
     parser.add_argument("--gamma", type=float, default=5.0, help="weight for controllable degree")
