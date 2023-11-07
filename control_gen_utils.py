@@ -56,8 +56,7 @@ def sentiment_sequential_generation(img_name, model, clip, tokenizer, image_inst
             batch_text_list = tokenizer.batch_decode(topk_inp_batch, skip_special_tokens=True)
             sentiment_probs_batch, sentiment_scores_batch, pos_tags, wordnet_pos_tags = batch_texts_POS_Sentiments_analysis(
                 batch_text_list, 1, topk_inp.device, sentiment_ctl=ctl_signal, batch_size_image=batch_size)
-            # clip_score, clip_ref = clip.compute_image_text_similarity_via_raw_text(image_embeds, batch_text_list)
-            sbert_score = _
+            clip_score, clip_ref = clip.compute_image_text_similarity_via_raw_text(image_embeds, batch_text_list)
             final_score = alpha * probs + beta * clip_score + gamma * sentiment_probs_batch + 0.1 * (1 - torch.exp(repeats))
             best_clip_id = final_score.argmax(dim=1).view(-1, 1)
             inp[:, seed_len + ii] = idxs_.gather(1, best_clip_id).squeeze(-1)

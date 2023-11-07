@@ -12,7 +12,7 @@ class CLIP(nn.Module):
         from transformers import CLIPProcessor, CLIPModel
         self.model = CLIPModel.from_pretrained(model_name)
         self.model.eval()
-        self.processor = CLIPProcessor.from_pretrained(model_name)
+        self.processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')
         from transformers import CLIPTokenizer
         self.tokenizer = CLIPTokenizer.from_pretrained(model_name)
         self.cuda_has_been_checked = False
@@ -28,24 +28,6 @@ class CLIP(nn.Module):
             print('Cuda is not available.')
             print('Device is {}'.format(self.device))
 
-    @torch.no_grad()
-    def compute_image_representation_from_image_path(self, image_path):
-        if not self.cuda_has_been_checked:
-            self.check_cuda()
-            self.cuda_has_been_checked = True
-        else:
-            pass
-        # image_path: the path of the image
-        image = Image.open(image_path)
-        inputs = self.processor(images=image, return_tensors="pt")
-        pixel_values = inputs['pixel_values']
-        if self.cuda_available:
-            pixel_values = pixel_values.cuda(self.device)
-        visual_outputs = self.model.vision_model(pixel_values=pixel_values)
-        image_embeds = visual_outputs[1]
-        image_embeds = self.model.visual_projection(image_embeds)  # [1 x embed_dim]
-        return image_embeds
-
     def compute_image_representation_from_image_instance(self, image):
         if not self.cuda_has_been_checked:
             self.check_cuda()
@@ -53,13 +35,10 @@ class CLIP(nn.Module):
         else:
             pass
         # image_path: the path of the image
-        inputs = self.processor(images=image, return_tensors="pt")
-        pixel_values = inputs['pixel_values']
-        if self.cuda_available:
-            pixel_values = pixel_values.cuda(self.device)
-        visual_outputs = self.model.vision_model(pixel_values=pixel_values)
+        inputs = self.processor(text=image, return_tensors="pt").to(self.device)
+        visual_outputs = self.model.text_model(**inputs)
         image_embeds = visual_outputs[1]
-        image_embeds = self.model.visual_projection(image_embeds)  # [1 x embed_dim]
+        image_embeds = self.model.text_projection(image_embeds)  # [1 x embed_dim]
         return image_embeds
 
     def compute_text_representation(self, text_list):
